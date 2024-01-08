@@ -578,30 +578,29 @@ def lr_scheduler(epoch, lr):
 
 model_LSTM = build_classifier_model_lstm_title_content()
 
-for i in range(1, 6):
-    # Define callbacks
-    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-    lr_schedule = LearningRateScheduler(lr_scheduler)
+# Define callbacks
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+lr_schedule = LearningRateScheduler(lr_scheduler)
 
-    # Train the model with callbacks
-    history = model_LSTM.fit(
-        [train_title, train_text],
-        train_labels,
-        batch_size=64,
-        epochs=100,
-        validation_split=0.10,
-        verbose=1,
-        callbacks=[early_stopping, lr_schedule]
-    )
+# Train the model with callbacks
+history = model_LSTM.fit(
+    [train_title, train_text],
+    train_labels,
+    batch_size=64,
+    epochs=100,
+    validation_split=0.10,
+    verbose=1,
+    callbacks=[early_stopping, lr_schedule]
+)
 
-    # Evaluate the model on the test set
-    score = model_LSTM.evaluate([test_title, test_text], test_labels, batch_size=64, verbose=1)
+# Evaluate the model on the test set
+score = model_LSTM.evaluate([test_title, test_text], test_labels, batch_size=64, verbose=1)
 
-    # Extract and print accuracy on the training set from the history
-    train_accuracy = history.history['accuracy'][-1]
-    test_accuracy = score[1]
-    print(f"Accuracy on training set (End of Training): {train_accuracy}")
-    print(f"Accuracy on test set: {test_accuracy}")
+# Extract and print accuracy on the training set from the history
+train_accuracy = history.history['accuracy'][-1]
+test_accuracy = score[1]
+print(f"Accuracy on training set (End of Training): {train_accuracy}")
+print(f"Accuracy on test set: {test_accuracy}")
 
 # Predictions on the test set
 test_pred = model_LSTM.predict([np.array(test_title), np.array(test_text)])
@@ -612,229 +611,4 @@ test_pred_categorical = np.argmax(test_pred, axis=1)
 # Calculate and print classification report
 report = classification_report(np.argmax(test_labels, axis=1), test_pred_categorical)
 print("Classification Report on Test Set:\n", report)
-
-# BiLSTM + CNN Titles+Contents(maximum)
-import tensorflow as tf
-from tensorflow.keras.layers import Input, Embedding, Bidirectional, LSTM, Conv2D, Reshape, MaxPool2D, Concatenate, Flatten, Dropout, Dense, Maximum
-
-def build_classifier_model_bilstm_cnn_title_content():
-    # Titles
-    inputs_title = Input(shape=(max_len_title,), dtype='int32')
-    embedding_title = Embedding(w2vModel.vectors.shape[0], w2vModel.vectors.shape[1], weights=[w2vModel.vectors],
-                               input_length=max_len_title, trainable=False)(inputs_title)
-    lstm_title = Bidirectional(LSTM(128, activation='tanh', return_sequences=True))(embedding_title)
-    reshape_title = Reshape((max_len_title, 256, 1))(lstm_title)
-
-    conv_title_0 = Conv2D(num_filters, kernel_size=(filter_sizes[0], 256), padding='valid', kernel_initializer='normal', activation='relu')(reshape_title)
-    conv_title_1 = Conv2D(num_filters, kernel_size=(filter_sizes[1], 256), padding='valid', kernel_initializer='normal', activation='relu')(reshape_title)
-    conv_title_2 = Conv2D(num_filters, kernel_size=(filter_sizes[2], 256), padding='valid', kernel_initializer='normal', activation='relu')(reshape_title)
-
-    maxpool_title_0 = MaxPool2D(pool_size=(max_len_title - filter_sizes[0] + 1, 1), strides=(1, 1), padding='valid')(conv_title_0)
-    maxpool_title_1 = MaxPool2D(pool_size=(max_len_title - filter_sizes[1] + 1, 1), strides=(1, 1), padding='valid')(conv_title_1)
-    maxpool_title_2 = MaxPool2D(pool_size=(max_len_title - filter_sizes[2] + 1, 1), strides=(1, 1), padding='valid')(conv_title_2)
-
-    concatenated_title_tensor = Concatenate(axis=1)([maxpool_title_0, maxpool_title_1, maxpool_title_2])
-    flatten_title = Flatten()(concatenated_title_tensor)
-    dropout_title = Dropout(drop)(flatten_title)
-
-    # Text
-    inputs_text = Input(shape=(max_len_text,), dtype='int32')
-    embedding_text = Embedding(w2vModel.vectors.shape[0], w2vModel.vectors.shape[1], weights=[w2vModel.vectors],
-                              input_length=max_len_text, trainable=False)(inputs_text)
-    lstm_text = Bidirectional(LSTM(128, activation='tanh', return_sequences=True))(embedding_text)
-    reshape_text = Reshape((max_len_text, 256, 1))(lstm_text)
-
-    conv_text_0 = Conv2D(num_filters, kernel_size=(filter_sizes[0], 256), padding='valid', kernel_initializer='normal', activation='relu')(reshape_text)
-    conv_text_1 = Conv2D(num_filters, kernel_size=(filter_sizes[1], 256), padding='valid', kernel_initializer='normal', activation='relu')(reshape_text)
-    conv_text_2 = Conv2D(num_filters, kernel_size=(filter_sizes[2], 256), padding='valid', kernel_initializer='normal', activation='relu')(reshape_text)
-
-    maxpool_text_0 = MaxPool2D(pool_size=(max_len_text - filter_sizes[0] + 1, 1), strides=(1, 1), padding='valid')(conv_text_0)
-    maxpool_text_1 = MaxPool2D(pool_size=(max_len_text - filter_sizes[1] + 1, 1), strides=(1, 1), padding='valid')(conv_text_1)
-    maxpool_text_2 = MaxPool2D(pool_size=(max_len_text - filter_sizes[2] + 1, 1), strides=(1, 1), padding='valid')(conv_text_2)
-
-    concatenated_text_tensor = Concatenate(axis=1)([maxpool_text_0, maxpool_text_1, maxpool_text_2])
-    flatten_text = Flatten()(concatenated_text_tensor)
-    dropout_text = Dropout(drop)(flatten_text)
-
-    # Average outputs
-    average = Maximum()([dropout_title, dropout_text])
-
-    preds = Dense(5, activation='softmax', name='classifier')(average)
-
-    # This creates a model that includes inputs and outputs
-    model = tf.keras.Model(inputs=[inputs_title, inputs_text], outputs=preds)
-
-    model.compile(loss='categorical_crossentropy',
-                  optimizer='adam',
-                  metrics=['acc'])
-    return model
-
-model = build_classifier_model_bilstm_cnn_title_content()
-model.summary()
-
-model.save_weights('BiLSTM + CNN_Maximum.h5')
-for i in range(1,6):
-  model = build_classifier_model_bilstm_cnn_title_content()
-  history = model.fit([train_title,train_text], train_labels, batch_size = 4, epochs = 100, validation_split = 0.10, verbose = 1)
-  score = model.evaluate([test_title,test_text], test_labels,batch_size=4, verbose = 1)
-
-# LSTM + CNN Titles + Contents( Maximum)
-import tensorflow as tf
-from tensorflow.keras.layers import Input, Embedding, LSTM, Conv2D, Reshape, MaxPool2D, Concatenate, Flatten, Dropout, Dense, Maximum
-
-def build_classifier_model_lstm_cnn_title_content():
-    # Titles
-    inputs_title = Input(shape=(max_len_title,), dtype='int32')
-    embedding_title = Embedding(w2vModel.vectors.shape[0], w2vModel.vectors.shape[1], weights=[w2vModel.vectors],
-                               input_length=max_len_title, trainable=False)(inputs_title)
-    lstm_title = LSTM(128, activation='tanh', return_sequences=True)(embedding_title)
-    reshape_title = Reshape((max_len_title, 128, 1))(lstm_title)
-
-    conv_title_0 = Conv2D(num_filters, kernel_size=(filter_sizes[0], 128), padding='valid', kernel_initializer='normal', activation='relu')(reshape_title)
-    conv_title_1 = Conv2D(num_filters, kernel_size=(filter_sizes[1], 128), padding='valid', kernel_initializer='normal', activation='relu')(reshape_title)
-    conv_title_2 = Conv2D(num_filters, kernel_size=(filter_sizes[2], 128), padding='valid', kernel_initializer='normal', activation='relu')(reshape_title)
-
-    maxpool_title_0 = MaxPool2D(pool_size=(max_len_title - filter_sizes[0] + 1, 1), strides=(1, 1), padding='valid')(conv_title_0)
-    maxpool_title_1 = MaxPool2D(pool_size=(max_len_title - filter_sizes[1] + 1, 1), strides=(1, 1), padding='valid')(conv_title_1)
-    maxpool_title_2 = MaxPool2D(pool_size=(max_len_title - filter_sizes[2] + 1, 1), strides=(1, 1), padding='valid')(conv_title_2)
-
-    concatenated_title_tensor = Concatenate(axis=1)([maxpool_title_0, maxpool_title_1, maxpool_title_2])
-    flatten_title = Flatten()(concatenated_title_tensor)
-    dropout_title = Dropout(drop)(flatten_title)
-
-    # Text
-    inputs_text = Input(shape=(max_len_text,), dtype='int32')
-    embedding_text = Embedding(w2vModel.vectors.shape[0], w2vModel.vectors.shape[1], weights=[w2vModel.vectors],
-                              input_length=max_len_text, trainable=False)(inputs_text)
-    lstm_text = LSTM(128, activation='tanh', return_sequences=True)(embedding_text)
-    reshape_text = Reshape((max_len_text, 128, 1))(lstm_text)
-
-    conv_text_0 = Conv2D(num_filters, kernel_size=(filter_sizes[0], 128), padding='valid', kernel_initializer='normal', activation='relu')(reshape_text)
-    conv_text_1 = Conv2D(num_filters, kernel_size=(filter_sizes[1], 128), padding='valid', kernel_initializer='normal', activation='relu')(reshape_text)
-    conv_text_2 = Conv2D(num_filters, kernel_size=(filter_sizes[2], 128), padding='valid', kernel_initializer='normal', activation='relu')(reshape_text)
-
-    maxpool_text_0 = MaxPool2D(pool_size=(max_len_text - filter_sizes[0] + 1, 1), strides=(1, 1), padding='valid')(conv_text_0)
-    maxpool_text_1 = MaxPool2D(pool_size=(max_len_text - filter_sizes[1] + 1, 1), strides=(1, 1), padding='valid')(conv_text_1)
-    maxpool_text_2 = MaxPool2D(pool_size=(max_len_text - filter_sizes[2] + 1, 1), strides=(1, 1), padding='valid')(conv_text_2)
-
-    concatenated_text_tensor = Concatenate(axis=1)([maxpool_text_0, maxpool_text_1, maxpool_text_2])
-    flatten_text = Flatten()(concatenated_text_tensor)
-    dropout_text = Dropout(drop)(flatten_text)
-
-    # Average outputs
-    average = Maximum()([dropout_title, dropout_text])
-
-    preds = Dense(5, activation='softmax', name='classifier')(average)
-
-    # This creates a model that includes inputs and outputs
-    model = tf.keras.Model(inputs=[inputs_title, inputs_text], outputs=preds)
-
-    model.compile(loss='categorical_crossentropy',
-                  optimizer='adam',
-                  metrics=['acc'])
-    return model
-
-model = build_classifier_model_lstm_cnn_title_content()
-model.summary()
-
-model.save_weights('LSTM + CNN_Maximum.h5')
-
-for i in range(1,6):
-  model = build_classifier_model_lstm_cnn_title_content()
-  history = model.fit([train_title,train_text], train_labels, batch_size = 4, epochs = 100, validation_split = 0.10, verbose = 1)
-  score = model.evaluate([test_title,test_text], test_labels,batch_size=4, verbose = 1)
-
-# CNN Contents+Titles(Maximum)
-import tensorflow as tf
-from tensorflow.keras.layers import Input, Embedding, Conv2D, Reshape, MaxPool2D, Concatenate, Flatten, Dropout, Dense, Maximum
-
-def build_classifier_model_cnn_title_content():
-    # Process Title
-    input_title = Input(shape=(max_len_title,), dtype='int32')
-    embedding_title = Embedding(w2vModel.vectors.shape[0], w2vModel.vectors.shape[1], weights=[w2vModel.vectors],
-                               input_length=max_len_title, trainable=False)(input_title)
-    reshape_title = Reshape((max_len_title, 300, 1))(embedding_title)
-
-    conv_title_0 = Conv2D(num_filters, kernel_size=(filter_sizes[0], 300), padding='valid', kernel_initializer='normal', activation='relu')(reshape_title)
-    conv_title_1 = Conv2D(num_filters, kernel_size=(filter_sizes[1], 300), padding='valid', kernel_initializer='normal', activation='relu')(reshape_title)
-    conv_title_2 = Conv2D(num_filters, kernel_size=(filter_sizes[2], 300), padding='valid', kernel_initializer='normal', activation='relu')(reshape_title)
-
-    maxpool_title_0 = MaxPool2D(pool_size=(max_len_title - filter_sizes[0] + 1, 1), strides=(1, 1), padding='valid')(conv_title_0)
-    maxpool_title_1 = MaxPool2D(pool_size=(max_len_title - filter_sizes[1] + 1, 1), strides=(1, 1), padding='valid')(conv_title_1)
-    maxpool_title_2 = MaxPool2D(pool_size=(max_len_title - filter_sizes[2] + 1, 1), strides=(1, 1), padding='valid')(conv_title_2)
-
-    concatenated_title_tensor = Concatenate(axis=1)([maxpool_title_0, maxpool_title_1, maxpool_title_2])
-    flatten_title = Flatten()(concatenated_title_tensor)
-    dropout_title = Dropout(drop)(flatten_title)
-
-    # Process Text
-    inputs_text = Input(shape=(max_len_text,), dtype='int32')
-    embedding_text = Embedding(w2vModel.vectors.shape[0], w2vModel.vectors.shape[1], weights=[w2vModel.vectors],
-                              input_length=max_len_text, trainable=False)(inputs_text)
-    reshape_text = Reshape((max_len_text, 300, 1))(embedding_text)
-
-    conv_text_0 = Conv2D(num_filters, kernel_size=(filter_sizes[0], 300), padding='valid', kernel_initializer='normal', activation='relu')(reshape_text)
-    conv_text_1 = Conv2D(num_filters, kernel_size=(filter_sizes[1], 300), padding='valid', kernel_initializer='normal', activation='relu')(reshape_text)
-    conv_text_2 = Conv2D(num_filters, kernel_size=(filter_sizes[2], 300), padding='valid', kernel_initializer='normal', activation='relu')(reshape_text)
-
-    maxpool_text_0 = MaxPool2D(pool_size=(max_len_text - filter_sizes[0] + 1, 1), strides=(1, 1), padding='valid')(conv_text_0)
-    maxpool_text_1 = MaxPool2D(pool_size=(max_len_text - filter_sizes[1] + 1, 1), strides=(1, 1), padding='valid')(conv_text_1)
-    maxpool_text_2 = MaxPool2D(pool_size=(max_len_text - filter_sizes[2] + 1, 1), strides=(1, 1), padding='valid')(conv_text_2)
-
-    concatenated_text_tensor = Concatenate(axis=1)([maxpool_text_0, maxpool_text_1, maxpool_text_2])
-    flatten_text = Flatten()(concatenated_text_tensor)
-    dropout_text = Dropout(drop)(flatten_text)
-
-    # Concatenation outputs
-    average = Maximum()([dropout_title, dropout_text])
-    out_put = Dense(units=5, activation='softmax', name='classifier')(average)
-
-    model = tf.keras.Model(inputs=[input_title, inputs_text], outputs=out_put)
-
-    # This creates a model that includes inputs and outputs
-    model.compile(loss='categorical_crossentropy',
-                  optimizer='adam',
-                  metrics=['acc'])
-    return model
-
-model = build_classifier_model_cnn_title_content()
-model.summary()
-
-model.save_weights('CNN_maximum.h5')
-
-for i in range(0,5):
-  model = build_classifier_model_cnn_title_content()
-  history = model.fit([train_title,train_text], train_labels, batch_size = 4, epochs = 100, validation_split = 0.10, verbose = 1)
-  score = model.evaluate([test_title, test_text], test_labels,batch_size=4, verbose = 1)
-
-import tensorflow as tf
-from tensorflow.keras.layers import Input, Embedding, LSTM, Dense, Maximum
-
-def build_classifier_model_lstm_title_content():
-    title = Input(shape=(max_len_title,), name='Review_Title')
-    embedding_title = Embedding(w2vModel.vectors.shape[0], w2vModel.vectors.shape[1], weights=[w2vModel.vectors],
-                               input_length=max_len_title, trainable=False)(title)
-    lstm_title = LSTM(128, activation='tanh')(embedding_title)
-
-    text = Input(shape=(max_len_text,), name='Review_Text')
-    embedding_text = Embedding(w2vModel.vectors.shape[0], w2vModel.vectors.shape[1], weights=[w2vModel.vectors],
-                              input_length=max_len_text, trainable=False)(text)
-    lstm_text = LSTM(128, activation='tanh')(embedding_text)
-
-    average = Maximum()([lstm_title, lstm_text])
-    out_put = Dense(units=5, activation='softmax', name='classifier')(average)
-
-    model = tf.keras.Model(inputs=[title, text], outputs=out_put)
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    return model
-
-model = build_classifier_model_lstm_title_content()
-model.summary()
-
-model.save_weights('LSTM_maximum.h5')
-
-for i in range(1,6):
-  model = build_classifier_model_lstm_title_content()
-  history = model.fit([train_title,train_text], train_labels, batch_size = 4, epochs = 100, validation_split = 0.10, verbose = 1)
-  score = model.evaluate([test_title, test_text], test_labels,batch_size=4, verbose = 1)
 
