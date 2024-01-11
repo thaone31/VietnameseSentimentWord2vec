@@ -51,11 +51,11 @@ if X_test.isnull().values.any():
 print(X_test.shape)
 print(X_test.columns)
 
-X_test = X_test[['processed_title', 'processed_review', 'user_rate']]
-X_test_title = X_test['processed_title'].apply(str)
-X_test_text = X_test['processed_review'].apply(str)
+X_test = X_test[['title', 'text', 'rating']]
+X_test_title = X_test['title'].apply(str)
+X_test_text = X_test['text'].apply(str)
 
-y_test = X_test['user_rate']
+y_test = X_test['rating']
 test_labels = to_categorical(y_test - 1, num_classes=5)
 
 w2vModel = word2vec.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True, limit=50000)
