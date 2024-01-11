@@ -39,7 +39,6 @@ X_train_title = X_train['title'].apply(str)
 X_train_text = X_train['text'].apply(str)
 
 y_train = X_train['rating']
-train_labels = to_categorical(y_train - 1, num_classes=5)
 
 import pandas as pd
 from keras.utils import to_categorical
