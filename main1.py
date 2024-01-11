@@ -27,24 +27,24 @@ print('Found GPU at: {}'.format(device_name))
 import pandas as pd
 from keras.utils import to_categorical
 
-X_train = pd.read_excel(r"processed_train.xlsx")
+X_train = pd.read_excel(r"Data_train.xlsx")
 
 if X_train.isnull().values.any():
     X_train = X_train.dropna()
 
 print(X_train.shape)
 
-X_train = X_train[['processed_title', 'processed_review', 'user_rate']]
-X_train_title = X_train['processed_title'].apply(str)
-X_train_text = X_train['processed_review'].apply(str)
+X_train = X_train[['title', 'text', 'rating']]
+X_train_title = X_train['title'].apply(str)
+X_train_text = X_train['text'].apply(str)
 
-y_train = X_train['user_rate']
+y_train = X_train['rating']
 train_labels = to_categorical(y_train - 1, num_classes=5)
 
 import pandas as pd
 from keras.utils import to_categorical
 
-X_test = pd.read_excel(r"processed_test.xlsx")
+X_test = pd.read_excel(r"Data_test.xlsx")
 
 if X_test.isnull().values.any():
     X_test = X_test.dropna()
@@ -132,7 +132,7 @@ def build_classifier_model_bilstm_title_content(learning_rate):
     # Additional Dense layer
     fc_combined = Dense(64, activation='relu')(dropout_output)
 
-    preds = Dense(5, activation='softmax', name='classifier')(fc_combined)
+    preds = Dense(3, activation='softmax', name='classifier')(fc_combined)
 
     # This creates a model that includes inputs and outputs
     model_BiLstm = tf.keras.Model(inputs=[inputs_title, inputs_text], outputs=preds)
@@ -159,31 +159,30 @@ def lr_scheduler(epoch, lr):
     else:
         return lr * tf.math.exp(-0.1)
 
-for i in range(1, 6):
-    learning_rate = 0.01
-    model_BiLstm = build_classifier_model_bilstm_title_content(learning_rate)
+learning_rate = 0.01
+model_BiLstm = build_classifier_model_bilstm_title_content(learning_rate)
 
-    # Define callbacks
-    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-    lr_schedule = LearningRateScheduler(lr_scheduler)
+# Define callbacks
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+lr_schedule = LearningRateScheduler(lr_scheduler)
 
-    # Train the model with callbacks
-    history = model_BiLstm.fit(
-        [train_title, train_text],
-        train_labels,
-        batch_size=4,
-        epochs=100,
-        validation_split=0.10,
-        verbose=1,
-        callbacks=[early_stopping, lr_schedule]
-    )
+# Train the model with callbacks
+history = model_BiLstm.fit(
+    [train_title, train_text],
+    train_labels,
+    batch_size=4,
+    epochs=100,
+    validation_split=0.10,
+    verbose=1,
+    callbacks=[early_stopping, lr_schedule]
+)
 
-    # Evaluate the model on the test set
-    score = model_BiLstm.evaluate([test_title, test_text], test_labels, verbose=1)
+# Evaluate the model on the test set
+score = model_BiLstm.evaluate([test_title, test_text], test_labels, verbose=1)
 
-    # Extract and print accuracy on the training set from the history
-    train_accuracy = history.history['acc'][-1]
-    print(f"Accuracy on training set (End of Training): {train_accuracy}")
+# Extract and print accuracy on the training set from the history
+train_accuracy = history.history['acc'][-1]
+print(f"Accuracy on training set (End of Training): {train_accuracy}")
 
 from sklearn.metrics import classification_report
 
@@ -252,7 +251,7 @@ def build_classifier_model_bilstm_cnn_title_content():
     flattened_output = Flatten()(concatenated_output)
     dropout_output = Dropout(drop)(flattened_output)
 
-    preds = Dense(5, activation='softmax', name='classifier')(dropout_output)
+    preds = Dense(3, activation='softmax', name='classifier')(dropout_output)
 
     # This creates a model that includes inputs and outputs
     model_BiLstm_CNN = tf.keras.Model(inputs=[inputs_title, inputs_text], outputs=preds)
@@ -277,30 +276,30 @@ def lr_scheduler(epoch, lr):
     else:
         return lr * tf.math.exp(-0.1)
 
-for i in range(1, 6):
+
     model_BiLstm_CNN = build_classifier_model_bilstm_cnn_title_content()
 
     # Define callbacks
     early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
     lr_schedule = LearningRateScheduler(lr_scheduler)
 
-    # Train the model with callbacks
-    history = model_BiLstm_CNN.fit(
-        [train_title, train_text],
-        train_labels,
-        batch_size=4,
-        epochs=100,
-        validation_split=0.10,
-        verbose=1,
-        callbacks=[early_stopping, lr_schedule]
-    )
+# Train the model with callbacks
+history = model_BiLstm_CNN.fit(
+    [train_title, train_text],
+    train_labels,
+    batch_size=4,
+    epochs=100,
+    validation_split=0.10,
+    verbose=1,
+    callbacks=[early_stopping, lr_schedule]
+)
 
-    # Evaluate the model on the test set
-    score = model_BiLstm_CNN.evaluate([test_title, test_text], test_labels, batch_size=4, verbose=1)
+# Evaluate the model on the test set
+score = model_BiLstm_CNN.evaluate([test_title, test_text], test_labels, batch_size=4, verbose=1)
 
-    # Extract and print accuracy on the training set from the history
-    train_accuracy = history.history['acc'][-1]
-    print(f"Accuracy on training set (End of Training): {train_accuracy}")
+# Extract and print accuracy on the training set from the history
+train_accuracy = history.history['acc'][-1]
+print(f"Accuracy on training set (End of Training): {train_accuracy}")
 
 # Predictions on the test set
 test_pred = model_BiLstm_CNN.predict([np.array(test_title), np.array(test_text)])
@@ -362,7 +361,7 @@ def build_classifier_model_lstm_cnn_title_content():
     # Average outputs
     average = Concatenate(axis=1)([dropout_title, dropout_text])
 
-    preds = Dense(5, activation='softmax', name='classifier')(average)
+    preds = Dense(3, activation='softmax', name='classifier')(average)
 
     # Tạo mô hình với inputs và outputs
     model_lstm_cnn = Model(inputs=[inputs_title, inputs_text], outputs=preds)
@@ -390,30 +389,29 @@ def lr_scheduler(epoch, lr):
     else:
         return lr * tf.math.exp(-0.1)
 
-for i in range(1, 6):
-    model_lstm_cnn = build_classifier_model_lstm_cnn_title_content()
+model_lstm_cnn = build_classifier_model_lstm_cnn_title_content()
 
-    # Define callbacks
-    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-    lr_schedule = LearningRateScheduler(lr_scheduler)
+# Define callbacks
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+lr_schedule = LearningRateScheduler(lr_scheduler)
 
-    # Train the model with callbacks
-    history = model_lstm_cnn.fit(
-        [train_title, train_text],
-        train_labels,
-        batch_size=64,
-        epochs=100,
-        validation_split=0.10,
-        verbose=1,
-        callbacks=[early_stopping, lr_schedule]
-    )
+# Train the model with callbacks
+history = model_lstm_cnn.fit(
+    [train_title, train_text],
+    train_labels,
+    batch_size=4,
+    epochs=100,
+    validation_split=0.10,
+    verbose=1,
+    callbacks=[early_stopping, lr_schedule]
+)
 
-    # Evaluate the model on the test set
-    score = model_lstm_cnn.evaluate([test_title, test_text], test_labels, batch_size=64, verbose=1)
+# Evaluate the model on the test set
+score = model_lstm_cnn.evaluate([test_title, test_text], test_labels, batch_size=4, verbose=1)
 
-    # Extract and print accuracy on the training set from the history
-    train_accuracy = history.history['acc'][-1]
-    print(f"Accuracy on training set (End of Training): {train_accuracy}")
+# Extract and print accuracy on the training set from the history
+train_accuracy = history.history['acc'][-1]
+print(f"Accuracy on training set (End of Training): {train_accuracy}")
 
 # Predictions on the test set
 test_pred = model_lstm_cnn.predict([np.array(test_title), np.array(test_text)])
@@ -477,7 +475,7 @@ def build_classifier_model_cnn_title_content():
 
     # Concatenation outputs
     average = Concatenate(axis=1)([dropout_title, dropout_text])
-    out_put = Dense(units=5, activation='softmax', name='classifier')(average)
+    out_put = Dense(units=3, activation='softmax', name='classifier')(average)
 
     model_CNN = tf.keras.Model(inputs=[input_title, inputs_text], outputs=out_put)
 
@@ -507,30 +505,29 @@ def lr_scheduler(epoch, lr):
     else:
         return lr * tf.math.exp(-0.1)
 
-for i in range(1, 6):
-    model_CNN = build_classifier_model_cnn_title_content()
+model_CNN = build_classifier_model_cnn_title_content()
 
-    # Define callbacks
-    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-    lr_schedule = LearningRateScheduler(lr_scheduler)
+# Define callbacks
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+lr_schedule = LearningRateScheduler(lr_scheduler)
 
-    # Train the model with callbacks
-    history = model_CNN.fit(
-        [train_title, train_text],
-        train_labels,
-        batch_size=64,
-        epochs=100,
-        validation_split=0.10,
-        verbose=1,
-        callbacks=[early_stopping, lr_schedule]
-    )
+# Train the model with callbacks
+history = model_CNN.fit(
+    [train_title, train_text],
+    train_labels,
+    batch_size=4,
+    epochs=100,
+    validation_split=0.10,
+    verbose=1,
+    callbacks=[early_stopping, lr_schedule]
+)
 
-    # Evaluate the model on the test set
-    score = model_CNN.evaluate([test_title, test_text], test_labels, batch_size=64, verbose=1)
+# Evaluate the model on the test set
+score = model_CNN.evaluate([test_title, test_text], test_labels, batch_size=4, verbose=1)
 
-    # Extract and print accuracy on the training set from the history
-    train_accuracy = history.history['acc'][-1]
-    print(f"Accuracy on training set (End of Training): {train_accuracy}")
+# Extract and print accuracy on the training set from the history
+train_accuracy = history.history['acc'][-1]
+print(f"Accuracy on training set (End of Training): {train_accuracy}")
 
 from sklearn.metrics import classification_report
 
@@ -586,7 +583,7 @@ lr_schedule = LearningRateScheduler(lr_scheduler)
 history = model_LSTM.fit(
     [train_title, train_text],
     train_labels,
-    batch_size=64,
+    batch_size=4,
     epochs=100,
     validation_split=0.10,
     verbose=1,
@@ -594,7 +591,7 @@ history = model_LSTM.fit(
 )
 
 # Evaluate the model on the test set
-score = model_LSTM.evaluate([test_title, test_text], test_labels, batch_size=64, verbose=1)
+score = model_LSTM.evaluate([test_title, test_text], test_labels, batch_size=4, verbose=1)
 
 # Extract and print accuracy on the training set from the history
 train_accuracy = history.history['accuracy'][-1]
