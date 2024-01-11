@@ -56,7 +56,6 @@ X_test_title = X_test['title'].apply(str)
 X_test_text = X_test['text'].apply(str)
 
 y_test = X_test['rating']
-test_labels = to_categorical(y_test - 1, num_classes=5)
 
 w2vModel = word2vec.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True, limit=50000)
 
@@ -168,7 +167,7 @@ lr_schedule = LearningRateScheduler(lr_scheduler)
 # Train the model with callbacks
 history = model_BiLstm.fit(
     [train_title, train_text],
-    train_labels,
+    y_train,
     batch_size=4,
     epochs=100,
     validation_split=0.10,
@@ -177,7 +176,7 @@ history = model_BiLstm.fit(
 )
 
 # Evaluate the model on the test set
-score = model_BiLstm.evaluate([test_title, test_text], test_labels, verbose=1)
+score = model_BiLstm.evaluate([test_title, test_text], y_test, verbose=1)
 
 # Extract and print accuracy on the training set from the history
 train_accuracy = history.history['acc'][-1]
@@ -192,7 +191,7 @@ test_pred = model_BiLstm.predict([np.array(test_title), np.array(test_text)])
 test_pred_categorical = np.argmax(test_pred, axis=1)
 
 # Calculate and print classification report
-report = classification_report(np.argmax(test_labels, axis=1), test_pred_categorical)
+report = classification_report(np.argmax(y_test, axis=1), test_pred_categorical)
 print("Classification Report on Test Set of BiLSTM:\n", report)
 
 
@@ -285,7 +284,7 @@ def lr_scheduler(epoch, lr):
 # Train the model with callbacks
 history = model_BiLstm_CNN.fit(
     [train_title, train_text],
-    train_labels,
+    y_train,
     batch_size=4,
     epochs=100,
     validation_split=0.10,
@@ -294,7 +293,7 @@ history = model_BiLstm_CNN.fit(
 )
 
 # Evaluate the model on the test set
-score = model_BiLstm_CNN.evaluate([test_title, test_text], test_labels, batch_size=4, verbose=1)
+score = model_BiLstm_CNN.evaluate([test_title, test_text], y_test, batch_size=4, verbose=1)
 
 # Extract and print accuracy on the training set from the history
 train_accuracy = history.history['acc'][-1]
@@ -307,7 +306,7 @@ test_pred = model_BiLstm_CNN.predict([np.array(test_title), np.array(test_text)]
 test_pred_categorical = np.argmax(test_pred, axis=1)
 
 # Calculate and print classification report
-report = classification_report(np.argmax(test_labels, axis=1), test_pred_categorical)
+report = classification_report(np.argmax(y_test, axis=1), test_pred_categorical)
 print("Classification Report on Test Set of BiLSTM + CNN:\n", report)
 
 
@@ -397,7 +396,7 @@ lr_schedule = LearningRateScheduler(lr_scheduler)
 # Train the model with callbacks
 history = model_lstm_cnn.fit(
     [train_title, train_text],
-    train_labels,
+    y_train,
     batch_size=4,
     epochs=100,
     validation_split=0.10,
@@ -406,7 +405,7 @@ history = model_lstm_cnn.fit(
 )
 
 # Evaluate the model on the test set
-score = model_lstm_cnn.evaluate([test_title, test_text], test_labels, batch_size=4, verbose=1)
+score = model_lstm_cnn.evaluate([test_title, test_text], y_test, batch_size=4, verbose=1)
 
 # Extract and print accuracy on the training set from the history
 train_accuracy = history.history['acc'][-1]
@@ -419,7 +418,7 @@ test_pred = model_lstm_cnn.predict([np.array(test_title), np.array(test_text)])
 test_pred_categorical = np.argmax(test_pred, axis=1)
 
 # Calculate and print classification report
-report = classification_report(np.argmax(test_labels, axis=1), test_pred_categorical)
+report = classification_report(np.argmax(y_test, axis=1), test_pred_categorical)
 print("Classification Report on Test Set:\n", report)
 
 # CNN Contents+Titles
@@ -513,7 +512,7 @@ lr_schedule = LearningRateScheduler(lr_scheduler)
 # Train the model with callbacks
 history = model_CNN.fit(
     [train_title, train_text],
-    train_labels,
+    y_train,
     batch_size=4,
     epochs=100,
     validation_split=0.10,
@@ -522,7 +521,7 @@ history = model_CNN.fit(
 )
 
 # Evaluate the model on the test set
-score = model_CNN.evaluate([test_title, test_text], test_labels, batch_size=4, verbose=1)
+score = model_CNN.evaluate([test_title, test_text], y_test, batch_size=4, verbose=1)
 
 # Extract and print accuracy on the training set from the history
 train_accuracy = history.history['acc'][-1]
@@ -537,7 +536,7 @@ test_pred = model_CNN.predict([np.array(test_title), np.array(test_text)])
 test_pred_categorical = np.argmax(test_pred, axis=1)
 
 # Calculate and print classification report
-report = classification_report(np.argmax(test_labels, axis=1), test_pred_categorical)
+report = classification_report(np.argmax(y_test, axis=1), test_pred_categorical)
 print("Classification Report on Test Set:\n", report)
 
 # LSTM Titles + Contents
@@ -581,7 +580,7 @@ lr_schedule = LearningRateScheduler(lr_scheduler)
 # Train the model with callbacks
 history = model_LSTM.fit(
     [train_title, train_text],
-    train_labels,
+    y_train,
     batch_size=4,
     epochs=100,
     validation_split=0.10,
@@ -590,7 +589,7 @@ history = model_LSTM.fit(
 )
 
 # Evaluate the model on the test set
-score = model_LSTM.evaluate([test_title, test_text], test_labels, batch_size=4, verbose=1)
+score = model_LSTM.evaluate([test_title, test_text], y_test, batch_size=4, verbose=1)
 
 # Extract and print accuracy on the training set from the history
 train_accuracy = history.history['accuracy'][-1]
@@ -605,6 +604,6 @@ test_pred = model_LSTM.predict([np.array(test_title), np.array(test_text)])
 test_pred_categorical = np.argmax(test_pred, axis=1)
 
 # Calculate and print classification report
-report = classification_report(np.argmax(test_labels, axis=1), test_pred_categorical)
+report = classification_report(np.argmax(y_test, axis=1), test_pred_categorical)
 print("Classification Report on Test Set:\n", report)
 
